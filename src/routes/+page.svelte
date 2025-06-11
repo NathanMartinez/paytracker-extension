@@ -827,7 +827,7 @@
 
 	<!-- Extract button -->
 	<button
-		on:click={refresh}
+		on:click={() => refresh()}
 		disabled={loading}
 		class="w-full px-6 py-3 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 text-white font-medium rounded-lg shadow-md hover:shadow-lg transition-all duration-200 disabled:cursor-not-allowed disabled:hover:bg-gray-400"
 	>

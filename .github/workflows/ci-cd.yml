@@ -27,7 +27,7 @@ jobs:
   validate:
     name: Validate & Security Check
     runs-on: ubuntu-latest
-    
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -39,14 +39,21 @@ jobs:
           cache: 'npm'
 
       - name: Install dependencies
-        run: npm ci --prefer-offline --no-audit
+        run: npm ci
 
       - name: Run security audit
-        run: npm run security:audit
+        run: npm audit --audit-level moderate
         continue-on-error: true
 
       - name: Validate manifest
-        run: npm run manifest:validate
+        run: |
+          if [ -f "src/manifest.json" ]; then
+            echo "Validating manifest.json..."
+            node -e "JSON.parse(require('fs').readFileSync('src/manifest.json', 'utf8'))"
+            echo "Manifest validation passed"
+          else
+            echo "Warning: manifest.json not found"
+          fi
 
   test:
     name: Test & Lint
@@ -64,7 +71,7 @@ jobs:
           cache: 'npm'
 
       - name: Install dependencies
-        run: npm run ci:install
+        run: npm ci
 
       - name: Run linting
         run: npm run lint
@@ -73,7 +80,7 @@ jobs:
         run: npm run type-check
 
       - name: Run tests with coverage
-        run: npm run ci:test
+        run: npm test -- --coverage
 
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v3
@@ -104,10 +111,16 @@ jobs:
           cache: 'npm'
 
       - name: Install dependencies
-        run: npm run ci:install
+        run: npm ci
 
       - name: Update manifest version
-        run: npm run manifest:version
+        run: |
+          VERSION=$(npm pkg get version | tr -d '"')
+          if [ -f "src/manifest.json" ]; then
+            sed -i.bak "s/\"version\": \".*\"/\"version\": \"$VERSION\"/" src/manifest.json
+            rm src/manifest.json.bak 2>/dev/null || true
+            echo "Updated manifest version to $VERSION"
+          fi
 
       - name: Build extension
         run: npm run build
@@ -153,13 +166,24 @@ jobs:
           cache: 'npm'
 
       - name: Install dependencies
-        run: npm run ci:install
+        run: npm ci
 
       - name: Build and package extension
-        run: npm run ci:build
+        run: |
+          npm run build
+          cd build
+          zip -r ../${{ needs.build.outputs.artifact-name }}.zip .
+          cd ..
 
       - name: Verify package contents
-        run: npm run package:verify
+        run: |
+          if [ -f "${{ needs.build.outputs.artifact-name }}.zip" ]; then
+            echo "Package created successfully: ${{ needs.build.outputs.artifact-name }}.zip"
+            unzip -l "${{ needs.build.outputs.artifact-name }}.zip"
+          else
+            echo "Error: Package not found"
+            exit 1
+          fi
 
       - name: Upload packaged extension
         uses: actions/upload-artifact@v4
@@ -194,14 +218,15 @@ jobs:
       - name: Generate changelog
         id: changelog
         run: |
+          VERSION="${{ steps.tag-version.outputs.version }}"
           if [ -f CHANGELOG.md ]; then
             # Extract changelog for this version
             CHANGELOG_CONTENT=$(sed -n "/## \[${VERSION}\]/,/## \[/p" CHANGELOG.md | sed '$d' | tail -n +2)
             if [ -z "$CHANGELOG_CONTENT" ]; then
-              CHANGELOG_CONTENT="Release version ${{ steps.tag-version.outputs.version }}"
+              CHANGELOG_CONTENT="Release version ${VERSION}"
             fi
           else
-            CHANGELOG_CONTENT="Release version ${{ steps.tag-version.outputs.version }}"
+            CHANGELOG_CONTENT="Release version ${VERSION}"
           fi
           echo "changelog<<EOF" >> $GITHUB_OUTPUT
           echo "$CHANGELOG_CONTENT" >> $GITHUB_OUTPUT
@@ -214,19 +239,19 @@ jobs:
           name: PayTracker Extension v${{ steps.tag-version.outputs.version }}
           body: |
             ## PayTracker Extension v${{ steps.tag-version.outputs.version }}
-            
+
             ${{ steps.changelog.outputs.changelog }}
-            
+
             ### Installation
             1. Download the `${{ needs.build.outputs.artifact-name }}.zip` file below
             2. Extract the contents
             3. Open Chrome and navigate to `chrome://extensions/`
             4. Enable "Developer mode"
             5. Click "Load unpacked" and select the extracted folder
-            
+
             ### What's Changed
             See the [CHANGELOG.md](https://github.com/${{ github.repository }}/blob/main/CHANGELOG.md) for detailed changes.
-            
+
             **Full Changelog**: https://github.com/${{ github.repository }}/compare/v${{ needs.build.outputs.version }}...v${{ steps.tag-version.outputs.version }}
           files: |
             ${{ needs.build.outputs.artifact-name }}.zip
@@ -238,7 +263,11 @@ jobs:
     name: Auto Version Bump
     runs-on: ubuntu-latest
     needs: test
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main' && !contains(github.event.head_commit.message, '[skip-version]') && !contains(github.event.head_commit.message, 'chore: bump version')
+    if: >
+      github.event_name == 'push' && 
+      github.ref == 'refs/heads/main' && 
+      !contains(github.event.head_commit.message, '[skip-version]') && 
+      !contains(github.event.head_commit.message, 'chore: bump version')
     permissions:
       contents: write
 
@@ -261,7 +290,7 @@ jobs:
           git config --local user.name "GitHub Action"
 
       - name: Install dependencies
-        run: npm run ci:install
+        run: npm ci
 
       - name: Determine version bump type
         id: version-type
@@ -279,7 +308,13 @@ jobs:
           fi
 
       - name: Bump version and create tag
-        run: npm run release:${{ steps.version-type.outputs.type }}
+        run: |
+          TYPE="${{ steps.version-type.outputs.type }}"
+          npm version $TYPE --no-git-tag-version
+          NEW_VERSION=$(npm pkg get version | tr -d '"')
+          git add package.json package-lock.json
+          git commit -m "chore: bump version to v${NEW_VERSION}"
+          git tag "v${NEW_VERSION}"
 
       - name: Push changes and tags
         run: git push --follow-tags
@@ -311,10 +346,16 @@ jobs:
           git config --local user.name "GitHub Action"
 
       - name: Install dependencies
-        run: npm run ci:install
+        run: npm ci
 
       - name: Create release
-        run: npm run release:${{ github.event.inputs.release_type }}
+        run: |
+          TYPE="${{ github.event.inputs.release_type }}"
+          npm version $TYPE --no-git-tag-version
+          NEW_VERSION=$(npm pkg get version | tr -d '"')
+          git add package.json package-lock.json
+          git commit -m "chore: bump version to v${NEW_VERSION}"
+          git tag "v${NEW_VERSION}"
 
       - name: Push changes and tags
         run: git push --follow-tags
@@ -360,12 +401,12 @@ jobs:
               repo: context.repo.repo,
               per_page: 100
             });
-            
+
             // Keep only the 10 most recent artifacts
             const oldArtifacts = artifacts.artifacts
               .sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
               .slice(10);
-              
+
             for (const artifact of oldArtifacts) {
               if (artifact.name.includes('extension-build-')) {
                 console.log(`Deleting old artifact: ${artifact.name}`);

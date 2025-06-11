@@ -166,7 +166,7 @@ function buildForProduction() {
 	logSuccess('Production build completed');
 }
 
-function packageExtension(version) {
+async function packageExtension(version) {
 	logStep('5', 'Packaging extension');
 
 	const zipFileName = `paytracker-extension-v${version}.zip`;
@@ -186,10 +186,10 @@ function packageExtension(version) {
 		process.exit(1);
 	}
 
-	  // Get package size
-	  const { statSync } = await import('fs');
-	  const stats = statSync(zipPath);
-	  const sizeKB = Math.round(stats.size / 1024);
+	// Get package size
+	const { statSync } = await import('fs');
+	const stats = statSync(zipPath);
+	const sizeKB = Math.round(stats.size / 1024);
 
 	logSuccess(`Package created: ${zipFileName} (${sizeKB} KB)`);
 	return zipFileName;
@@ -312,7 +312,7 @@ async function main() {
 		validateCodebase();
 		const version = updateVersions(versionType);
 		buildForProduction();
-		const packageFile = packageExtension(version);
+		const packageFile = await packageExtension(version);
 		generateReleaseNotes(version);
 		createGitTag(version);
 		printSummary(version, packageFile);

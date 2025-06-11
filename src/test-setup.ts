@@ -7,7 +7,7 @@ const mockChrome = {
 		id: 'test-extension-id',
 		onMessage: {
 			addListener: vi.fn(),
-			removeListener: vi.fn(),
+			removeListener: vi.fn()
 		},
 		sendMessage: vi.fn(),
 		getURL: vi.fn((path: string) => `chrome-extension://test-id/${path}`),
@@ -32,12 +32,16 @@ const mockChrome = {
 		}
 	},
 	tabs: {
-		query: vi.fn(() => Promise.resolve([{
-			id: 1,
-			url: 'https://example.com',
-			active: true,
-			windowId: 1
-		}])),
+		query: vi.fn(() =>
+			Promise.resolve([
+				{
+					id: 1,
+					url: 'https://example.com',
+					active: true,
+					windowId: 1
+				}
+			])
+		),
 		executeScript: vi.fn(() => Promise.resolve()),
 		sendMessage: vi.fn(() => Promise.resolve())
 	},
@@ -47,11 +51,13 @@ const mockChrome = {
 		removeCSS: vi.fn(() => Promise.resolve())
 	},
 	windows: {
-		create: vi.fn(() => Promise.resolve({
-			id: 1,
-			focused: true,
-			type: 'popup'
-		})),
+		create: vi.fn(() =>
+			Promise.resolve({
+				id: 1,
+				focused: true,
+				type: 'popup'
+			})
+		),
 		update: vi.fn(() => Promise.resolve()),
 		remove: vi.fn(() => Promise.resolve())
 	},
@@ -99,49 +105,63 @@ afterEach(() => {
 export { mockChrome };
 
 // Helper function to create mock DOM elements
-export function createMockElement(tagName: string, attributes: Record<string, string> = {}, textContent = '') {
+export function createMockElement(
+	tagName: string,
+	attributes: Record<string, string> = {},
+	textContent = ''
+) {
 	const element = document.createElement(tagName);
-	
+
 	Object.entries(attributes).forEach(([key, value]) => {
 		element.setAttribute(key, value);
 	});
-	
+
 	if (textContent) {
 		element.textContent = textContent;
 	}
-	
+
 	return element;
 }
 
 // Helper function to create mock transaction elements
-export function createMockTransactionRow(data: {
-	id?: string;
-	customer?: string;
-	amount?: string;
-	date?: string;
-} = {}) {
+export function createMockTransactionRow(
+	data: {
+		id?: string;
+		customer?: string;
+		amount?: string;
+		date?: string;
+	} = {}
+) {
 	const row = createMockElement('tr', { class: 'transaction-row' });
-	
+
 	// Transaction ID cell
 	const idCell = createMockElement('td', { class: 'transaction-id' });
-	const idLink = createMockElement('a', { 
-		href: `/transaction/${data.id || 'TEST123'}` 
-	}, data.id || 'TEST123');
+	const idLink = createMockElement(
+		'a',
+		{
+			href: `/transaction/${data.id || 'TEST123'}`
+		},
+		data.id || 'TEST123'
+	);
 	idCell.appendChild(idLink);
 	row.appendChild(idCell);
-	
+
 	// Customer cell
-	const customerCell = createMockElement('td', { class: 'customer-name' }, data.customer || 'Test Customer');
+	const customerCell = createMockElement(
+		'td',
+		{ class: 'customer-name' },
+		data.customer || 'Test Customer'
+	);
 	row.appendChild(customerCell);
-	
+
 	// Amount cell
 	const amountCell = createMockElement('td', { class: 'amount' }, data.amount || '$100.00');
 	row.appendChild(amountCell);
-	
+
 	// Date cell
 	const dateCell = createMockElement('td', { class: 'date' }, data.date || '2024-01-01');
 	row.appendChild(dateCell);
-	
+
 	return row;
 }
 
@@ -149,48 +169,48 @@ export function createMockTransactionRow(data: {
 export function createMockPayTrackerPage(transactions: any[] = []) {
 	// Clear existing DOM
 	document.body.innerHTML = '';
-	
+
 	// Create main container
 	const container = createMockElement('div', { class: 'main-content' });
-	
+
 	// Create transactions table
 	const table = createMockElement('table', { class: 'transactions-table' });
 	const tbody = createMockElement('tbody');
-	
+
 	// Add transaction rows
-	transactions.forEach(transaction => {
+	transactions.forEach((transaction) => {
 		const row = createMockTransactionRow(transaction);
 		tbody.appendChild(row);
 	});
-	
+
 	table.appendChild(tbody);
 	container.appendChild(table);
 	document.body.appendChild(container);
-	
+
 	return container;
 }
 
 // Mock local storage
 export const mockLocalStorage = {
 	store: new Map<string, string>(),
-	getItem: vi.fn((key: string) => mockLocalStorage.store.get(key) || null),
-	setItem: vi.fn((key: string, value: string) => {
+	getItem: vi.fn((key: string): string | null => mockLocalStorage.store.get(key) || null),
+	setItem: vi.fn((key: string, value: string): void => {
 		mockLocalStorage.store.set(key, value);
 	}),
-	removeItem: vi.fn((key: string) => {
+	removeItem: vi.fn((key: string): void => {
 		mockLocalStorage.store.delete(key);
 	}),
-	clear: vi.fn(() => {
+	clear: vi.fn((): void => {
 		mockLocalStorage.store.clear();
 	}),
-	key: vi.fn((index: number) => {
+	key: vi.fn((index: number): string | null => {
 		const keys = Array.from(mockLocalStorage.store.keys());
 		return keys[index] || null;
 	}),
-	get length() {
+	get length(): number {
 		return mockLocalStorage.store.size;
 	}
-};
+} as Storage;
 
 // Apply localStorage mock
 Object.defineProperty(window, 'localStorage', {
@@ -205,18 +225,18 @@ export const testUtils = {
 	createMockTransactionRow,
 	createMockPayTrackerPage,
 	mockLocalStorage,
-	
+
 	// Helper to wait for async operations
 	async waitFor(condition: () => boolean, timeout = 1000): Promise<void> {
 		const start = Date.now();
 		while (!condition() && Date.now() - start < timeout) {
-			await new Promise(resolve => setTimeout(resolve, 10));
+			await new Promise((resolve) => setTimeout(resolve, 10));
 		}
 		if (!condition()) {
 			throw new Error('Condition not met within timeout');
 		}
 	},
-	
+
 	// Helper to simulate user events
 	simulateClick(element: Element) {
 		const event = new MouseEvent('click', {
@@ -226,7 +246,7 @@ export const testUtils = {
 		});
 		element.dispatchEvent(event);
 	},
-	
+
 	// Helper to simulate input changes
 	simulateInput(element: HTMLInputElement, value: string) {
 		element.value = value;

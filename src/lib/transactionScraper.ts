@@ -100,14 +100,12 @@ export const extractTransactionDataFromPage = (): Transaction[] => {
 				// Try different text content methods
 				const extractionMethods = [
 					() => transactionElement.textContent?.trim(),
-					() => transactionElement.innerText?.trim(),
+					() => (transactionElement as HTMLElement).innerText?.trim(),
 					() => {
 						// Get text from all child text nodes
 						const walker = document.createTreeWalker(
 							transactionElement,
-							NodeFilter.SHOW_TEXT,
-							null,
-							false
+							NodeFilter.SHOW_TEXT
 						);
 						let textContent = '';
 						let node;

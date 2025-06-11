@@ -48,7 +48,9 @@ describe('Customer Name Formatting', () => {
 
 	it('should handle member/individual names', () => {
 		expect(formatCustomerName('Member Account', true, false, false)).toBe('Member, Individual');
-		expect(formatCustomerName('Individual Customer', true, false, false)).toBe('Member, Individual');
+		expect(formatCustomerName('Individual Customer', true, false, false)).toBe(
+			'Member, Individual'
+		);
 	});
 });
 
@@ -66,10 +68,10 @@ describe('CSV Utilities', () => {
 			{ customer: 'John Doe', date: '2024-01-15', amount: '$100.00', transactionId: 'TXN001' },
 			{ customer: 'Jane Smith', date: '2024-01-16', amount: '$200.00', transactionId: 'TXN002' }
 		];
-		
+
 		const formatFunction = (name: string) => name;
 		const csv = generateCSV(transactions, formatFunction);
-		
+
 		expect(csv).toContain('Customer,Date,Amount,ID');
 		expect(csv).toContain('John Doe,2024-01-15,$100.00,TXN001');
 		expect(csv).toContain('Jane Smith,2024-01-16,$200.00,TXN002');
@@ -77,12 +79,17 @@ describe('CSV Utilities', () => {
 
 	it('should handle CSV with special characters', () => {
 		const transactions = [
-			{ customer: 'John "Johnny" Doe', date: '2024-01-15', amount: '$1,000.00', transactionId: 'TXN,001' }
+			{
+				customer: 'John "Johnny" Doe',
+				date: '2024-01-15',
+				amount: '$1,000.00',
+				transactionId: 'TXN,001'
+			}
 		];
-		
+
 		const formatFunction = (name: string) => name;
 		const csv = generateCSV(transactions, formatFunction);
-		
+
 		expect(csv).toContain('"John ""Johnny"" Doe"');
 		expect(csv).toContain('"$1,000.00"');
 		expect(csv).toContain('"TXN,001"');
@@ -248,7 +255,7 @@ describe('Storage Utilities', () => {
 		testUtils.mockLocalStorage.setItem = vi.fn().mockImplementation(() => {
 			throw new Error('Storage full');
 		});
-		
+
 		expect(() => setSetting('test', 'value')).not.toThrow();
 	});
 });
@@ -316,6 +323,7 @@ describe('Window Management', () => {
 		];
 
 		testUtils.mockChrome.windows = {
+			...testUtils.mockChrome.windows,
 			getAll: vi.fn().mockResolvedValue(mockWindows)
 		};
 
@@ -330,6 +338,7 @@ describe('Window Management', () => {
 		];
 
 		testUtils.mockChrome.windows = {
+			...testUtils.mockChrome.windows,
 			getAll: vi.fn().mockResolvedValue(mockWindows)
 		};
 
@@ -354,12 +363,14 @@ describe('Data Validation', () => {
 		expect(isValidTransactionData(null)).toBeFalsy();
 		expect(isValidTransactionData({})).toBe(false);
 		expect(isValidTransactionData({ customer: 'John' })).toBe(false);
-		expect(isValidTransactionData({ 
-			customer: 123, 
-			date: '2024-01-15', 
-			amount: '$100', 
-			transactionId: 'TXN001' 
-		})).toBe(false);
+		expect(
+			isValidTransactionData({
+				customer: 123,
+				date: '2024-01-15',
+				amount: '$100',
+				transactionId: 'TXN001'
+			})
+		).toBe(false);
 	});
 
 	it('should sanitize transaction data', () => {
@@ -379,7 +390,7 @@ describe('Data Validation', () => {
 describe('Toast Messages', () => {
 	it('should create toast message', () => {
 		const toast = createToastMessage('Test message', 'success', 5000);
-		
+
 		expect(toast.message).toBe('Test message');
 		expect(toast.type).toBe('success');
 		expect(toast.duration).toBe(5000);
@@ -388,7 +399,7 @@ describe('Toast Messages', () => {
 
 	it('should use default values', () => {
 		const toast = createToastMessage('Test message');
-		
+
 		expect(toast.type).toBe('success');
 		expect(toast.duration).toBe(3000);
 	});
@@ -456,7 +467,9 @@ describe('Window Detection', () => {
 	});
 
 	it('should create detached URL', () => {
-		testUtils.mockChrome.runtime.getURL.mockReturnValue('chrome-extension://test-id/index.html?detached=true');
+		testUtils.mockChrome.runtime.getURL.mockReturnValue(
+			'chrome-extension://test-id/index.html?detached=true'
+		);
 
 		const url = createDetachedURL();
 		expect(url).toBe('chrome-extension://test-id/index.html?detached=true');
@@ -476,7 +489,7 @@ describe('Performance Utilities', () => {
 
 		expect(callCount).toBe(0);
 
-		await new Promise(resolve => setTimeout(resolve, 150));
+		await new Promise((resolve) => setTimeout(resolve, 150));
 		expect(callCount).toBe(1);
 	});
 
@@ -491,7 +504,7 @@ describe('Performance Utilities', () => {
 
 		expect(callCount).toBe(1);
 
-		await new Promise(resolve => setTimeout(resolve, 150));
+		await new Promise((resolve) => setTimeout(resolve, 150));
 		throttledFunction();
 		expect(callCount).toBe(2);
 	});
