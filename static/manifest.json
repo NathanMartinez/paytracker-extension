@@ -1,7 +1,7 @@
 {
 	"name": "PayTracker Transaction Extractor",
 	"description": "Extract transaction data from PayTracker SaaS platform",
-	"version": "1.0.0",
+	"version": "3.0.0",
 	"manifest_version": 3,
 	"icons": {
 		"16": "favicon-16x16.png",
