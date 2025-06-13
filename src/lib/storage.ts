@@ -13,7 +13,7 @@ export interface StorageOptions {
 
 export class TransactionCache {
 	private memoryCache = new Map<string, CacheEntry<any>>();
-	private readonly defaultTTL = 24 * 60 * 60 * 1000; // 24 hours
+	private readonly defaultTTL = 10 * 60 * 1000; // 10 mins
 	private readonly maxMemoryEntries = 50;
 	private readonly storageKey = 'paytracker_cache';
 
@@ -365,7 +365,6 @@ export class TransactionCache {
 
 // Create and export a default instance
 export const transactionCache = new TransactionCache({
-	ttl: 24 * 60 * 60 * 1000, // 24 hours
 	maxEntries: 100,
 	enableCompression: true
 });

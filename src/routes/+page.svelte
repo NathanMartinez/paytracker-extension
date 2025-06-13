@@ -4,7 +4,6 @@
 	import { onMount } from 'svelte';
 	import {
 		formatCustomerName,
-		escapeCSVValue,
 		copyToClipboard as utilCopyToClipboard,
 		generateCSV,
 		downloadCSV,
@@ -16,9 +15,7 @@
 		checkInstanceExists,
 		findExistingDetachedWindow,
 		isDetachedWindow,
-		createDetachedURL,
-		handleError,
-		formatCacheAge
+		createDetachedURL
 	} from '../lib/utils';
 
 	let transactions: Transaction[] = [];
@@ -404,17 +401,6 @@
 		privacyMode = !privacyMode;
 		setSetting('privacyMode', privacyMode);
 		showToastMessage(privacyMode ? '🔒 Privacy mode enabled' : '🔓 Privacy mode disabled');
-		// Force immediate table update by triggering reactivity
-		transactions = [...transactions];
-		filteredTransactions = filterTransactions(transactions, searchTerm);
-	}
-
-	function toggleCloverMode() {
-		cloverMode = !cloverMode;
-		setSetting('cloverMode', cloverMode);
-		showToastMessage(
-			cloverMode ? '👥 Clover replacement enabled' : '❌ Clover replacement disabled'
-		);
 		// Force immediate table update by triggering reactivity
 		transactions = [...transactions];
 		filteredTransactions = filterTransactions(transactions, searchTerm);
@@ -827,6 +813,7 @@
 
 	<!-- Extract button -->
 	<button
+		on:load={() => refresh()}
 		on:click={() => refresh()}
 		disabled={loading}
 		class="w-full px-6 py-3 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 text-white font-medium rounded-lg shadow-md hover:shadow-lg transition-all duration-200 disabled:cursor-not-allowed disabled:hover:bg-gray-400"
@@ -889,7 +876,7 @@
 					</tr>
 				</thead>
 				<tbody class="divide-y divide-gray-200 dark:divide-gray-700">
-					{#each filteredTransactions as tx, i}
+					{#each filteredTransactions as tx}
 						<tr class="hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors duration-150">
 							<td
 								class="px-4 py-3 text-sm text-gray-900 dark:text-gray-100 break-words font-semibold select-text cursor-pointer hover:bg-blue-50 dark:hover:bg-blue-900/20"
@@ -981,8 +968,6 @@
 			</div>
 		</div>
 	{/if}
-
-	<!-- Resize handle indicator (only shown in detached mode) -->
 </main>
 
 <style>
@@ -999,17 +984,14 @@
 
 	/* Popup mode styling */
 	main.popup {
-		width: 32rem;
-		max-width: 32rem;
+		min-width: 34rem;
 		min-height: 200px;
 		max-height: 600px; /* Chrome popup size limit */
-		height: auto;
 		border-radius: 8px;
 		box-shadow:
 			0 10px 15px -3px rgba(0, 0, 0, 0.1),
 			0 4px 6px -2px rgba(0, 0, 0, 0.05);
 		overflow-y: auto;
-		resize: vertical;
 	}
 
 	/* Detached window styling */
