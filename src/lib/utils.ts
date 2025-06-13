@@ -1,52 +1,11 @@
 // Privacy and formatting utilities
-export function formatCustomerName(
-	name: string,
-	privacyMode: boolean,
-	cloverMode: boolean,
-	forExport: boolean = false
-): string {
-	// For export/copy, check clover mode separately
-	if (
-		forExport &&
-		cloverMode &&
-		(name.toLowerCase().includes('clover c') || name.toLowerCase().includes('clover customer'))
-	) {
+export function formatCustomerName(name: string): string {
+	if (name.toLowerCase().includes('member') || name.toLowerCase().includes('individual')) {
 		return 'Member, Individual';
 	}
-
-	// If neither privacy mode nor export mode, return original
-	if (!privacyMode && !forExport) return name;
-
-	// Privacy mode replacements for display
-	if (privacyMode && !forExport) {
-		if (name.toLowerCase().includes('member') || name.toLowerCase().includes('individual')) {
-			return 'Member, Individual';
-		}
-
-		const parts = name.trim().split(' ');
-		if (parts.length >= 2) {
-			// Handle middle names - keep first name and last initial
-			return `${parts[0]} ${parts[parts.length - 1].charAt(0)}.`;
-		}
-	}
-
-	// For export, apply both privacy and clover modes
-	if (forExport) {
-		if (
-			cloverMode &&
-			(name.toLowerCase().includes('clover c') || name.toLowerCase().includes('clover customer'))
-		) {
-			return 'Member, Individual';
-		}
-		if (privacyMode) {
-			if (name.toLowerCase().includes('member') || name.toLowerCase().includes('individual')) {
-				return 'Member, Individual';
-			}
-			const parts = name.trim().split(' ');
-			if (parts.length >= 2) {
-				return `${parts[0]} ${parts[parts.length - 1].charAt(0)}.`;
-			}
-		}
+	const parts = name.trim().split(' ');
+	if (parts.length >= 2) {
+		return `${parts[0]} ${parts[parts.length - 1].charAt(0)}.`;
 	}
 
 	return name;
@@ -252,8 +211,6 @@ export function handleError(error: any, context: string): string {
 
 // Data persistence utilities
 export const STORAGE_KEYS = {
-	PRIVACY_MODE: 'privacyMode',
-	CLOVER_MODE: 'cloverMode',
 	COMPACT_MODE: 'compactMode',
 	THEME: 'theme',
 	CACHE_DATA: 'transactionCache',

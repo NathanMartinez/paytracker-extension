@@ -31,8 +31,6 @@
 	let searchTerm = '';
 	let filteredTransactions: Transaction[] = [];
 	let showSettings = false;
-	let privacyMode = false;
-	let cloverMode = false;
 
 	// Initialize theme and check cache
 	onMount(async () => {
@@ -41,8 +39,6 @@
 
 		// Load preferences
 		compactMode = await getSetting('compactMode', true);
-		cloverMode = await getSetting('cloverMode', false);
-		privacyMode = await getSetting('privacyMode', false);
 
 		// Check for cross-mode data sync
 		const syncData = await chrome.storage.local.get([
@@ -62,8 +58,6 @@
 				if (data.transactions && data.transactions.length > 0) {
 					transactions = [...data.transactions];
 					searchTerm = data.searchTerm || '';
-					privacyMode = data.privacyMode !== undefined ? data.privacyMode : privacyMode;
-					cloverMode = data.cloverMode !== undefined ? data.cloverMode : cloverMode;
 					cacheStatus.fromCache = true;
 					dataLoaded = true;
 				}
@@ -77,8 +71,6 @@
 					cacheStatus.fromCache = true;
 				}
 				if (data.searchTerm) searchTerm = data.searchTerm;
-				if (data.privacyMode !== undefined) privacyMode = data.privacyMode;
-				if (data.cloverMode !== undefined) cloverMode = data.cloverMode;
 			}
 		} else {
 			// In popup mode, check for data from detached mode
@@ -87,8 +79,6 @@
 				if (data.transactions && data.transactions.length > 0 && transactions.length === 0) {
 					transactions = [...data.transactions];
 					searchTerm = data.searchTerm || '';
-					privacyMode = data.privacyMode !== undefined ? data.privacyMode : privacyMode;
-					cloverMode = data.cloverMode !== undefined ? data.cloverMode : cloverMode;
 					cacheStatus.fromCache = true;
 				}
 			}
@@ -121,8 +111,6 @@
 					const data = popupData.popupModeData;
 					transactions = [...data.transactions];
 					if (data.searchTerm) searchTerm = data.searchTerm;
-					if (data.privacyMode !== undefined) privacyMode = data.privacyMode;
-					if (data.cloverMode !== undefined) cloverMode = data.cloverMode;
 					cacheStatus.fromCache = true;
 					await updateCacheStatus();
 					showToastMessage(`✨ ${data.transactions.length} cached transactions loaded`);
@@ -151,8 +139,8 @@
 	$: filteredTransactions = filterTransactions(transactions, searchTerm);
 
 	// Privacy mode name replacement
-	function formatName(name: string, forExport: boolean = false): string {
-		return formatCustomerName(name, privacyMode, cloverMode, forExport);
+	function formatName(name: string): string {
+		return formatCustomerName(name);
 	}
 
 	// Format date to standardized MM/DD/YYYY format
@@ -218,13 +206,11 @@
 	}
 
 	// Watch for privacy mode changes and update immediately
-	$: if (typeof privacyMode !== 'undefined' && typeof cloverMode !== 'undefined') {
-		if (transactions.length > 0) {
-			// Force reactivity for privacy changes by creating new array reference
-			transactions = [...transactions];
-			// Also update filtered transactions immediately
-			filteredTransactions = filterTransactions(transactions, searchTerm);
-		}
+	$: if (transactions.length > 0) {
+		// Force reactivity for privacy changes by creating new array reference
+		transactions = [...transactions];
+		// Also update filtered transactions immediately
+		filteredTransactions = filterTransactions(transactions, searchTerm);
 	}
 
 	async function preventMultipleInstances() {
@@ -303,7 +289,7 @@
 	}
 
 	// CSV formatting helper
-	const formatForExport = (name: string) => formatName(name, true);
+	const formatForExport = (name: string) => formatName(name);
 
 	const copyAll = async () => {
 		const formattedTransactions = filteredTransactions.map((tx) => ({
@@ -397,15 +383,6 @@
 		setSetting('compactMode', compactMode);
 	}
 
-	function togglePrivacyMode() {
-		privacyMode = !privacyMode;
-		setSetting('privacyMode', privacyMode);
-		showToastMessage(privacyMode ? '🔒 Privacy mode enabled' : '🔓 Privacy mode disabled');
-		// Force immediate table update by triggering reactivity
-		transactions = [...transactions];
-		filteredTransactions = filterTransactions(transactions, searchTerm);
-	}
-
 	async function detachWindow() {
 		// Check for existing detached window
 		if (await checkInstanceExists('detached')) {
@@ -430,9 +407,7 @@
 			await chrome.storage.local.set({
 				detachedModeData: {
 					transactions: transactions,
-					searchTerm: searchTerm,
-					privacyMode: privacyMode,
-					cloverMode: cloverMode
+					searchTerm: searchTerm
 				}
 			});
 
@@ -464,8 +439,6 @@
 			const currentData = {
 				transactions: transactions,
 				searchTerm: searchTerm,
-				privacyMode: privacyMode,
-				cloverMode: cloverMode,
 				timestamp: Date.now()
 			};
 
@@ -556,32 +529,6 @@
 				</button>
 			{/if}
 
-			<!-- Settings button -->
-			<button
-				on:click={() => (showSettings = !showSettings)}
-				class="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors duration-200"
-				title="Settings"
-			>
-				<svg
-					class="w-5 h-5 text-gray-600 dark:text-gray-400"
-					fill="none"
-					stroke="currentColor"
-					viewBox="0 0 24 24"
-				>
-					<path
-						stroke-linecap="round"
-						stroke-linejoin="round"
-						stroke-width="2"
-						d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"
-					></path>
-					<path
-						stroke-linecap="round"
-						stroke-linejoin="round"
-						stroke-width="2"
-						d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
-					></path>
-				</svg>
-			</button>
 			<!-- Compact/Expand toggle (only show in popup mode) -->
 			{#if !isDetached}
 				<button
@@ -682,68 +629,6 @@
 			</button>
 		</div>
 	</div>
-
-	<!-- Settings panel -->
-	{#if showSettings}
-		<div
-			class="w-full p-4 bg-gray-50 dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700"
-		>
-			<div class="flex items-center justify-between mb-3">
-				<p class="text-sm font-medium text-gray-700 dark:text-gray-300">Settings</p>
-			</div>
-
-			<div class="space-y-3">
-				<!-- Privacy Mode Toggle -->
-				<div class="flex items-center justify-between">
-					<div>
-						<p class="text-sm text-gray-700 dark:text-gray-300">Privacy Mode</p>
-						<p class="text-xs text-gray-500 dark:text-gray-400">
-							Replace full names with "Firstname L."
-						</p>
-					</div>
-					<button
-						on:click={togglePrivacyMode}
-						class="relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
-						class:bg-blue-600={privacyMode}
-						class:bg-gray-200={!privacyMode}
-					>
-						<span
-							class="inline-block h-4 w-4 transform rounded-full bg-white transition-transform"
-							class:translate-x-6={privacyMode}
-							class:translate-x-1={!privacyMode}
-						></span>
-					</button>
-				</div>
-
-				<!-- Clover Customer Members Toggle -->
-				<div class="flex items-center justify-between">
-					<div>
-						<p class="text-sm text-gray-700 dark:text-gray-300">
-							Replace "Clover Customer" with "Member, Individual"
-						</p>
-						<p class="text-xs text-gray-500 dark:text-gray-400">
-							Replaces "Clover Customer" entries on export/copy
-						</p>
-					</div>
-					<button
-						on:click={() => {
-							cloverMode = !cloverMode;
-							localStorage.setItem('cloverMode', cloverMode.toString());
-						}}
-						class="relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
-						class:bg-blue-600={cloverMode}
-						class:bg-gray-200={!cloverMode}
-					>
-						<span
-							class="inline-block h-4 w-4 transform rounded-full bg-white transition-transform"
-							class:translate-x-6={cloverMode}
-							class:translate-x-1={!cloverMode}
-						></span>
-					</button>
-				</div>
-			</div>
-		</div>
-	{/if}
 
 	<!-- Cache controls panel -->
 	{#if showCacheControls}
